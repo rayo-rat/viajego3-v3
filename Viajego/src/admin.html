@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración | ViajeGO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { min-height: 100vh; background-color: #343a40; color: white; }
+        .nav-link { color: rgba(255,255,255,.8); cursor: pointer; }
+        .nav-link.active { background-color: #dc3545; color: white; }
+        .nav-link:hover { color: white; }
+        .time-group { background-color: #e9ecef; border-radius: 5px; padding: 5px; margin-bottom: 5px; border: 1px solid #ced4da; }
+        .section-header { background-color: #e9ecef; padding: 8px; border-radius: 5px; font-weight: bold; margin-bottom: 10px; border-left: 4px solid #0d6efd; }
+        .file-drop-zone { border: 2px dashed #ccc; padding: 10px; text-align: center; cursor: pointer; margin-top: 10px; }
+        .file-drop-zone.drag-over { border-color: #007bff; background-color: #f0f8ff; }
+        .file-preview { max-width: 100%; max-height: 150px; display: block; margin: 10px auto 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-3">
+                <h4 class="text-center mb-4"><i class="fas fa-tools"></i> Admin</h4>
+                <div class="nav flex-column nav-pills" id="v-pills-tab">
+                    <a class="nav-link active" onclick="switchTab('agencias')"><i class="fas fa-building me-2"></i> Agencias</a>
+                    <a class="nav-link" onclick="switchTab('paquetes')"><i class="fas fa-gift me-2"></i> Paquetes</a>
+                    <a class="nav-link" onclick="switchTab('vuelos')"><i class="fas fa-plane me-2"></i> Vuelos</a>
+                    <a class="nav-link" onclick="switchTab('hoteles')"><i class="fas fa-hotel me-2"></i> Hoteles</a>
+                    <a class="nav-link" onclick="switchTab('autobuses')"><i class="fas fa-bus me-2"></i> Autobuses</a>
+                    <button class="btn btn-outline-light mt-4" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+            <div class="col-md-10 p-4">
+                <div id="content-area"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalPaquete">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white"><h5 class="modal-title">Gestor Dinámico de Paquetes</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-paquete" enctype="multipart/form-data">
+                        <input type="hidden" name="id">
+                        
+                        <div class="row">
+                            <div class="col-md-4 border-end">
+                                <div class="section-header">1. General</div>
+                                <div class="mb-2"><input type="text" name="titulo" class="form-control" placeholder="Título del Paquete" required></div>
+                                <div class="mb-2"><input type="text" name="destino" class="form-control" placeholder="Destino Principal" required></div>
+                                <div class="mb-2"><input type="text" name="duracion" class="form-control" placeholder="Duración (Ej: 5 Días / 4 Noches)" required></div>
+                                <div class="mb-2"><input type="number" name="precio" class="form-control fw-bold text-success" placeholder="Precio Final ($)" required></div>
+                                <div class="mb-2"><textarea name="servicios" class="form-control" rows="3" placeholder="Servicios incluidos (Texto libre)"></textarea></div>
+                                <div class="mb-2"><select name="agencia_id" class="form-select agencia-select"></select></div>
+
+                                <div class="section-header mt-4">4. Imagen</div>
+                                <div class="file-drop-zone" id="drop-paquetes">
+                                    <p class="mb-0 small">Arrastra o haz clic para subir</p>
+                                    <input type="file" name="imagen" class="d-none" id="file-paquetes" accept="image/*">
+                                    <img src="" class="file-preview" id="preview-paquetes" style="display:none;">
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <div class="section-header d-flex justify-content-between">
+                                    <span>2. Transporte</span>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <input type="radio" class="btn-check" name="trans_type" id="t_vuelo" value="vuelo" checked onchange="toggleTransport()">
+                                        <label class="btn btn-outline-primary" for="t_vuelo">Vuelo</label>
+                                        <input type="radio" class="btn-check" name="trans_type" id="t_bus" value="bus" onchange="toggleTransport()">
+                                        <label class="btn btn-outline-primary" for="t_bus">Autobús</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="card bg-light mb-3 p-2">
+                                    <select class="form-select mb-2" id="source_transport" onchange="loadTransportData()">
+                                        <option value="">-- Cargar Datos de Vuelo/Bus Existente --</option>
+                                    </select>
+                                    
+                                    <div class="row g-2">
+                                        <div class="col-6"><input type="text" name="t_empresa" class="form-control form-control-sm" placeholder="Aerolínea / Línea"></div>
+                                        <div class="col-6"><input type="text" name="t_codigo" class="form-control form-control-sm" placeholder="Vuelo / Ruta"></div>
+                                        <div class="col-6"><input type="text" name="t_origen" class="form-control form-control-sm" placeholder="Origen"></div>
+                                        <div class="col-6"><input type="text" name="t_destino" class="form-control form-control-sm" placeholder="Destino"></div>
+                                        <div class="col-6"><label class="small">Ida</label><input type="datetime-local" name="t_ida" class="form-control form-control-sm"></div>
+                                        <div class="col-6"><label class="small">Regreso</label><input type="datetime-local" name="t_regreso" class="form-control form-control-sm"></div>
+                                        <div class="col-6"><input type="text" name="t_clase" class="form-control form-control-sm" placeholder="Clase"></div>
+                                        <div class="col-6" id="div_equipaje"><input type="text" name="t_equipaje" class="form-control form-control-sm" placeholder="Equipaje"></div>
+                                    </div>
+                                </div>
+
+                                <div class="section-header">3. Alojamiento</div>
+                                <div class="card bg-light p-2">
+                                    <select class="form-select mb-2" id="source_hotel" onchange="loadHotelData()">
+                                        <option value="">-- Cargar Datos de Hotel Existente --</option>
+                                    </select>
+                                    
+                                    <div class="row g-2">
+                                        <div class="col-8"><input type="text" name="h_nombre" class="form-control form-control-sm" placeholder="Nombre Hotel"></div>
+                                        <div class="col-4"><input type="text" name="h_ciudad" class="form-control form-control-sm" placeholder="Ciudad"></div>
+                                        <div class="col-6">
+                                            <select name="h_habitacion" class="form-select form-select-sm">
+                                                <option>Estándar</option><option>Doble</option><option>Suite</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6"><input type="text" name="h_comidas" class="form-control form-control-sm" placeholder="Plan Alimentos"></div>
+                                        <div class="col-12"><input type="text" name="h_servicios" class="form-control form-control-sm" placeholder="Servicios (Wifi, etc)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 mt-3 fw-bold">Guardar Paquete Completo</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalHotel">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning"><h5 class="modal-title">Gestión Hotel</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-hotel" enctype="multipart/form-data">
+                        <input type="hidden" name="id">
+                        <input type="text" name="nombre" class="form-control mb-2" placeholder="Nombre Hotel" required>
+                        <input type="text" name="ciudad" class="form-control mb-2" placeholder="Ciudad" required>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><input type="number" name="estrellas" class="form-control" placeholder="Estrellas (1-5)" required></div>
+                            <div class="col-6"><input type="number" name="precio" class="form-control" placeholder="Precio Noche" required></div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="small fw-bold">Tipo de Habitación</label>
+                            <select name="tipo_habitacion" id="h_tipo" class="form-select">
+                                <option value="Estándar">Estándar</option>
+                                <option value="Doble">Doble</option>
+                                <option value="Suite">Suite</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="small fw-bold">Capacidad Máx</label>
+                            <input type="number" name="capacidad_max" id="h_capacidad" class="form-control" value="4">
+                        </div>
+
+                        <input type="text" name="servicios" class="form-control mb-3" placeholder="Servicios (Separados por coma)">
+
+                        <select name="agencia_id" class="form-select agencia-select mb-2" required></select>
+                        
+                        <div class="section-header mt-4">Imagen</div>
+                        <div class="file-drop-zone" id="drop-hoteles">
+                            <p class="mb-0 small">Arrastra o haz clic para subir</p>
+                            <input type="file" name="imagen" class="d-none" id="file-hoteles" accept="image/*">
+                            <img src="" class="file-preview" id="preview-hoteles" style="display:none;">
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 mt-3">Guardar Cambios</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalVuelo">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title">Gestión Vuelo</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-vuelo" enctype="multipart/form-data">
+                        <input type="hidden" name="id">
+                        <div class="row g-2">
+                            <div class="col-4"><input type="text" name="codigo" class="form-control" placeholder="Código Vuelo (Ej: AM123)" required></div>
+                            <div class="col-4"><input type="text" name="origen" class="form-control" placeholder="Origen" required></div>
+                            <div class="col-4"><input type="text" name="destino" class="form-control" placeholder="Destino" required></div>
+                            
+                            <div class="col-12 mt-3"><h6 class="text-primary border-bottom">Itinerario de IDA</h6></div>
+                            <div class="col-4">
+                                <label class="small text-muted">Fecha Salida</label>
+                                <input type="date" id="v_date_ida" class="form-control" required>
+                            </div>
+                            <div class="col-8">
+                                <div class="time-group d-flex align-items-end gap-2">
+                                    <div><label class="small">Hora Salida</label><input type="time" id="v_time_salida_ida" class="form-control" required></div>
+                                    <div><i class="fas fa-arrow-right text-muted"></i></div>
+                                    <div><label class="small">Hora Llegada</label><input type="time" id="v_time_llegada_ida" class="form-control" required></div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="v_check_ida_nextday">
+                                        <label class="form-check-label small" for="v_check_ida_nextday">+1 día</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12"><h6 class="text-primary border-bottom">Itinerario de REGRESO</h6></div>
+                            <div class="col-4">
+                                <label class="small text-muted">Fecha Regreso</label>
+                                <input type="date" id="v_date_reg" class="form-control" required>
+                            </div>
+                            <div class="col-8">
+                                <div class="time-group d-flex align-items-end gap-2">
+                                    <div><label class="small">Hora Salida</label><input type="time" id="v_time_salida_reg" class="form-control" required></div>
+                                    <div><i class="fas fa-arrow-right text-muted"></i></div>
+                                    <div><label class="small">Hora Llegada</label><input type="time" id="v_time_llegada_reg" class="form-control" required></div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="v_check_reg_nextday">
+                                        <label class="form-check-label small" for="v_check_reg_nextday">+1 día</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-3"><input type="number" name="precio" class="form-control" placeholder="Precio Total" required></div>
+                            <div class="col-6 mt-3"><select name="clase" class="form-select"><option>Económica</option><option>Ejecutiva</option><option>Primera Clase</option></select></div>
+                            <div class="col-12"><label class="small text-muted">Agencia (Opera el vuelo)</label><select name="agencia_id" class="form-select agencia-select" required></select></div>
+                            
+                            <div class="col-12">
+                                <div class="section-header mt-4">Imagen</div>
+                                <div class="file-drop-zone" id="drop-vuelos">
+                                    <p class="mb-0 small">Arrastra o haz clic para subir</p>
+                                    <input type="file" name="imagen" class="d-none" id="file-vuelos" accept="image/*">
+                                    <img src="" class="file-preview" id="preview-vuelos" style="display:none;">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mt-4 fw-bold">Guardar Vuelo</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalBus">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white"><h5 class="modal-title">Gestión Autobús</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-autobus" enctype="multipart/form-data">
+                        <input type="hidden" name="id">
+                        <div class="row g-2">
+                            <div class="col-6"><input type="text" name="origen" class="form-control" placeholder="Ciudad Origen" required></div>
+                            <div class="col-6"><input type="text" name="destino" class="form-control" placeholder="Ciudad Destino" required></div>
+                            
+                            <div class="col-12 mt-3"><h6 class="text-info border-bottom">Itinerario de IDA</h6></div>
+                            <div class="col-4"><label class="small text-muted">Fecha Salida</label><input type="date" id="b_date_ida" class="form-control" required></div>
+                            <div class="col-8">
+                                <div class="time-group d-flex align-items-end gap-2">
+                                    <div><label class="small">Hora Salida</label><input type="time" id="b_time_salida_ida" class="form-control" required></div>
+                                    <div><i class="fas fa-arrow-right text-muted"></i></div>
+                                    <div><label class="small">Hora Llegada</label><input type="time" id="b_time_llegada_ida" class="form-control" required></div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="b_check_ida_nextday">
+                                        <label class="form-check-label small" for="b_check_ida_nextday">+1 día</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12"><h6 class="text-info border-bottom">Itinerario de REGRESO</h6></div>
+                            <div class="col-4"><label class="small text-muted">Fecha Regreso</label><input type="date" id="b_date_reg" class="form-control" required></div>
+                            <div class="col-8">
+                                <div class="time-group d-flex align-items-end gap-2">
+                                    <div><label class="small">Hora Salida</label><input type="time" id="b_time_salida_reg" class="form-control" required></div>
+                                    <div><i class="fas fa-arrow-right text-muted"></i></div>
+                                    <div><label class="small">Hora Llegada</label><input type="time" id="b_time_llegada_reg" class="form-control" required></div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="b_check_reg_nextday">
+                                        <label class="form-check-label small" for="b_check_reg_nextday">+1 día</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6 mt-3"><input type="number" name="precio" class="form-control" placeholder="Precio" required></div>
+                            <div class="col-6 mt-3"><select name="tipo_asiento" class="form-select"><option>Estándar</option><option>Ejecutivo</option><option>Lujo</option></select></div>
+                            <div class="col-12"><label class="small text-muted">Agencia (Línea de Autobús)</label><select name="agencia_id" class="form-select agencia-select" required></select></div>
+                            
+                            <div class="col-12">
+                                <div class="section-header mt-4">Imagen</div>
+                                <div class="file-drop-zone" id="drop-autobuses">
+                                    <p class="mb-0 small">Arrastra o haz clic para subir</p>
+                                    <input type="file" name="imagen" class="d-none" id="file-autobuses" accept="image/*">
+                                    <img src="" class="file-preview" id="preview-autobuses" style="display:none;">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-info w-100 mt-4 fw-bold text-white">Guardar Ruta</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAgencia">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white"><h5 class="modal-title">Gestión Agencia</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="form-agencia">
+                        <input type="hidden" name="id">
+                        <input type="text" name="nombre" class="form-control mb-2" placeholder="Nombre" required>
+                        <select name="tipo" class="form-select mb-2"><option>Hoteles</option><option>Vuelos</option><option>Transporte</option><option>Mixto</option></select>
+                        <input type="text" name="contacto" class="form-control mb-2" placeholder="Contacto">
+                        <button type="submit" class="btn btn-dark w-100">Guardar Cambios</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentData = [], agenciasCache = [], vuelosCache = [], busesCache = [], hotelesCache = [];
+        let currentTab = 'agencias';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(!localStorage.getItem('user')) window.location.href = 'login.html';
+            initData();
+            switchTab('agencias');
+            setupDragAndDrop();
+        });
+
+        // --- LÓGICA DRAG AND DROP ---
+        function setupDragAndDrop() {
+            const zones = document.querySelectorAll('.file-drop-zone');
+            zones.forEach(zone => {
+                const fileInput = zone.querySelector('input[type="file"]');
+                const preview = zone.querySelector('img');
+
+                // Abrir selector al hacer clic
+                zone.addEventListener('click', () => fileInput.click());
+
+                // Detener propagación del click para los inputs ocultos
+                fileInput.addEventListener('click', (e) => e.stopPropagation());
+
+                // Mostrar la previsualización
+                fileInput.addEventListener('change', () => {
+                    const file = fileInput.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            preview.src = e.target.result;
+                            preview.style.display = 'block';
+                            zone.querySelector('p').style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                // Lógica de Drag and Drop
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    zone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    zone.addEventListener(eventName, () => zone.classList.add('drag-over'), false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    zone.addEventListener(eventName, () => zone.classList.remove('drag-over'), false);
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files.length) {
+                        fileInput.files = files; // Asignar archivos al input
+                        const event = new Event('change');
+                        fileInput.dispatchEvent(event); // Disparar evento para previsualizar
+                    }
+                }, false);
+            });
+        }
+
+        async function initData() {
+            agenciasCache = await (await fetch('/api/agencias')).json();
+            vuelosCache = await (await fetch('/api/vuelos')).json();
+            busesCache = await (await fetch('/api/autobuses')).json();
+            hotelesCache = await (await fetch('/api/hoteles')).json();
+            
+            document.querySelectorAll('.agencia-select').forEach(s => s.innerHTML = agenciasCache.map(a => `<option value="${a.id}">${a.nombre}</option>`).join(''));
+            
+            updatePackageTransportSelect('vuelo');
+            const hSel = document.getElementById('source_hotel');
+            hSel.innerHTML += hotelesCache.map(h => `<option value="${h.id}">${h.nombre} (${h.ciudad})</option>`).join('');
+        }
+
+        async function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            const clickedLink = event.target.closest('.nav-link');
+            if(clickedLink) clickedLink.classList.add('active');
+
+            document.getElementById('content-area').innerHTML = '<div class="spinner-border"></div>';
+
+            let apiUrl = `/api/${tab}`;
+            if(tab === 'autobuses') apiUrl = '/api/autobuses';
+            const res = await fetch(apiUrl);
+            currentData = await res.json();
+            if(tab === 'vuelos') vuelosCache = currentData;
+            if(tab === 'autobuses') busesCache = currentData;
+            if(tab === 'hoteles') hotelesCache = currentData;
+
+            let modalId = '';
+            if(tab === 'agencias') modalId = "#modalAgencia";
+            else if(tab === 'paquetes') modalId = "#modalPaquete";
+            else if(tab === 'vuelos') modalId = "#modalVuelo";
+            else if(tab === 'hoteles') modalId = "#modalHotel";
+            else if(tab === 'autobuses') modalId = "#modalBus";
+
+            let rows = currentData.map(item => {
+                let info = item.nombre || item.titulo || (item.aerolinea + ' ' + item.codigo_vuelo) || item.linea_autobus;
+                return `<tr><td>${item.id}</td><td><b>${info}</b></td><td><button class="btn btn-sm btn-warning me-1" onclick="openEdit(${item.id}, '${modalId}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-danger" onclick="deleteItem('${tab}', ${item.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+
+            document.getElementById('content-area').innerHTML = `<div class="d-flex justify-content-between align-items-center mb-4"><h3>${tab.toUpperCase()}</h3><button class="btn btn-success" onclick="openNew('${modalId}')"><i class="fas fa-plus"></i> Nuevo</button></div><div class="card shadow"><div class="card-body"><table class="table"><thead><tr><th>ID</th><th>Info</th><th>Acciones</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+        }
+
+        // --- LÓGICA HOTEL REVERTIDA ---
+        function updateCapacity() {
+            // Lógica removida, no hace nada ahora
+        }
+
+        // --- LÓGICA PAQUETE MEJORADA ---
+        function toggleTransport() {
+            const type = document.querySelector('input[name="trans_type"]:checked').value;
+            updatePackageTransportSelect(type);
+            document.getElementById('div_equipaje').style.display = type === 'vuelo' ? 'block' : 'none';
+        }
+
+        function updatePackageTransportSelect(type) {
+            const sel = document.getElementById('source_transport');
+            sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+            const list = type === 'vuelo' ? vuelosCache : busesCache;
+            sel.innerHTML += list.map(i => `<option value="${i.id}">${i.aerolinea || i.linea_autobus} - ${i.origen_iata || i.origen} a ${i.destino_iata || i.destino}</option>`).join('');
+        }
+
+        function loadTransportData() {
+            const id = parseInt(document.getElementById('source_transport').value);
+            const type = document.querySelector('input[name="trans_type"]:checked').value;
+            const item = (type === 'vuelo' ? vuelosCache : busesCache).find(i => i.id === id);
+            if(!item) return;
+
+            const f = document.getElementById('form-paquete');
+            f.querySelector('[name="t_empresa"]').value = item.aerolinea || item.linea_autobus;
+            f.querySelector('[name="t_codigo"]').value = item.codigo_vuelo || 'Ruta Bus';
+            f.querySelector('[name="t_origen"]').value = item.origen_iata || item.origen;
+            f.querySelector('[name="t_destino"]').value = item.destino_iata || item.destino;
+            f.querySelector('[name="t_ida"]').value = item.fecha_salida.replace(' ', 'T');
+            f.querySelector('[name="t_regreso"]').value = item.fecha_regreso_salida ? item.fecha_regreso_salida.replace(' ', 'T') : '';
+            f.querySelector('[name="t_clase"]').value = item.clase_base || item.tipo_asiento;
+            f.querySelector('[name="t_equipaje"]').value = item.servicios_a_bordo || '';
+        }
+
+        function loadHotelData() {
+            const id = parseInt(document.getElementById('source_hotel').value);
+            const item = hotelesCache.find(i => i.id === id);
+            if(!item) return;
+
+            const f = document.getElementById('form-paquete');
+            f.querySelector('[name="h_nombre"]').value = item.nombre;
+            f.querySelector('[name="h_ciudad"]').value = item.ciudad;
+            f.querySelector('[name="h_habitacion"]').value = item.tipo_habitacion;
+            f.querySelector('[name="h_servicios"]').value = item.servicios || '';
+        }
+
+        // --- CRUD GENÉRICO ---
+        function openNew(modalId) {
+            document.querySelector(modalId + ' form').reset();
+            document.querySelector(modalId + ' input[name="id"]').value = "";
+            
+            // Limpiar previsualización de imagen al abrir
+            const preview = document.querySelector(modalId + ' .file-preview');
+            const textP = document.querySelector(modalId + ' .file-drop-zone p');
+            if (preview) { preview.style.display = 'none'; preview.src = ''; }
+            if (textP) textP.style.display = 'block';
+
+            new bootstrap.Modal(document.querySelector(modalId)).show();
+        }
+
+        function openEdit(id, modalId) {
+            const item = currentData.find(i => i.id === id);
+            const form = document.querySelector(modalId + ' form');
+            form.reset();
+            
+            for (const key in item) {
+                if(form.elements[key]) form.elements[key].value = item[key];
+                
+                // Mapeo especial para Paquetes (JSON plano a inputs)
+                if(modalId === '#modalPaquete') {
+                    if(key === 'transporte_data' && item[key]) {
+                        const transType = item[key].t_type || 'vuelo';
+                        document.getElementById('t_' + transType).checked = true;
+                        toggleTransport();
+                        
+                        form.querySelector('[name="t_empresa"]').value = item[key].t_empresa || '';
+                        form.querySelector('[name="t_codigo"]').value = item[key].t_codigo || '';
+                        form.querySelector('[name="t_origen"]').value = item[key].t_origen || '';
+                        form.querySelector('[name="t_destino"]').value = item[key].t_destino || '';
+                        form.querySelector('[name="t_ida"]').value = item[key].t_ida || '';
+                        form.querySelector('[name="t_regreso"]').value = item[key].t_regreso || '';
+                        form.querySelector('[name="t_clase"]').value = item[key].t_clase || '';
+                    }
+                    if(key === 'hotel_data' && item[key]) {
+                        form.querySelector('[name="h_nombre"]').value = item[key].h_nombre || '';
+                        form.querySelector('[name="h_ciudad"]').value = item[key].h_ciudad || '';
+                        form.querySelector('[name="h_habitacion"]').value = item[key].h_habitacion || '';
+                        form.querySelector('[name="h_servicios"]').value = item[key].h_servicios || '';
+                    }
+                }
+                
+                // Mapeo especial Hotel (Revertido)
+                if(modalId === '#modalHotel') {
+                    if(key === 'tipo_habitacion') {
+                        document.getElementById('h_tipo').value = item.tipo_habitacion;
+                        // updateCapacity(); // Desactivado
+                    }
+                }
+            }
+
+            // Cargar previsualización de imagen si existe
+            const preview = document.querySelector(modalId + ' .file-preview');
+            const textP = document.querySelector(modalId + ' .file-drop-zone p');
+            if (item.imagen_url) {
+                preview.src = item.imagen_url;
+                preview.style.display = 'block';
+                textP.style.display = 'none';
+            } else {
+                preview.style.display = 'none';
+                textP.style.display = 'block';
+            }
+
+            // Mapeo especial para Vuelos y Buses (Fechas descompuestas)
+            if(modalId === '#modalVuelo' || modalId === '#modalBus') {
+                const prefix = modalId === '#modalVuelo' ? 'v_' : 'b_';
+                splitDateTime(item.fecha_salida, prefix+'date_ida', prefix+'time_salida_ida');
+                splitDateTime(item.fecha_llegada, null, prefix+'time_llegada_ida');
+                
+                const d1 = new Date(item.fecha_salida);
+                const d2 = new Date(item.fecha_llegada);
+                document.getElementById(prefix+'check_ida_nextday').checked = (d2.getDate() !== d1.getDate());
+
+                splitDateTime(item.fecha_regreso_salida, prefix+'date_reg', prefix+'time_salida_reg');
+                splitDateTime(item.fecha_regreso_llegada, null, prefix+'time_llegada_reg');
+                
+                const d3 = new Date(item.fecha_regreso_salida);
+                const d4 = new Date(item.fecha_regreso_llegada);
+                document.getElementById(prefix+'check_reg_nextday').checked = (d4.getDate() !== d3.getDate());
+            }
+
+            new bootstrap.Modal(document.querySelector(modalId)).show();
+        }
+
+        function splitDateTime(isoStr, dateId, timeId) {
+            if(!isoStr) return;
+            const [datePart, timePart] = isoStr.split(' ');
+            
+            if(dateId) document.getElementById(dateId).value = datePart;
+            if(timeId) document.getElementById(timeId).value = timePart.slice(0,5);
+        }
+
+        async function deleteItem(endpoint, id) {
+            if(!confirm('¿Borrar?')) return;
+            await fetch(`/api/${endpoint}/${id}`, { method: 'DELETE' });
+            switchTab(endpoint);
+        }
+
+        function logout() { localStorage.removeItem('user'); window.location.href = 'index.html'; }
+
+        // Submit Handler
+        ['form-agencia','form-paquete','form-vuelo','form-hotel','form-autobus'].forEach(fid => {
+            document.getElementById(fid).addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries()); // Usado para lógica JS
+                
+                // --- MANEJO DE DATOS Y JSON (Frontend) ---
+                if(fid === 'form-vuelo' || fid === 'form-autobus') {
+                    const prefix = fid === 'form-vuelo' ? 'v_' : 'b_';
+                    const select = form.querySelector('.agencia-select');
+                    formData.set(fid === 'form-vuelo' ? 'aerolinea' : 'linea', select.options[select.selectedIndex].text);
+
+                    const buildDT = (dateId, timeId, checkNextDayId) => {
+                        let dateVal = document.getElementById(prefix+dateId)?.value;
+                        let timeVal = document.getElementById(prefix+timeId).value;
+                        let baseDate = new Date(dateVal);
+                        if(checkNextDayId && document.getElementById(prefix+checkNextDayId).checked) {
+                            baseDate.setDate(baseDate.getDate() + 1);
+                        }
+                        return `${baseDate.toISOString().split('T')[0]} ${timeVal}:00`;
+                    };
+
+                    formData.set('fecha_salida', buildDT('date_ida', 'time_salida_ida', null));
+                    formData.set('fecha_llegada', buildDT('date_ida', 'time_llegada_ida', 'check_ida_nextday'));
+                    formData.set('fecha_regreso_salida', buildDT('date_reg', 'time_salida_reg', null));
+                    formData.set('fecha_regreso_llegada', buildDT('date_reg', 'time_llegada_reg', 'check_reg_nextday'));
+                    
+                    // Eliminar campos temporales que no van a la DB
+                    ['date_ida', 'time_salida_ida', 'time_llegada_ida', 'check_ida_nextday', 'date_reg', 'time_salida_reg', 'time_llegada_reg', 'check_reg_nextday'].forEach(tempKey => formData.delete(tempKey));
+                }
+
+                if(fid === 'form-paquete') {
+                    const trans_type = form.querySelector('input[name="trans_type"]:checked').value;
+                    
+                    // Asignar fechas del transporte a las fechas oficiales del paquete
+                    formData.set('fecha_salida', data.t_ida);
+                    formData.set('fecha_regreso', data.t_regreso);
+                    
+                    const transporte_data = {
+                        t_type: trans_type, t_empresa: data.t_empresa, t_codigo: data.t_codigo, t_origen: data.t_origen,
+                        t_destino: data.t_destino, t_ida: data.t_ida, t_regreso: data.t_regreso, t_clase: data.t_clase, t_equipaje: data.t_equipaje
+                    };
+                    const hotel_data = {
+                        h_nombre: data.h_nombre, h_ciudad: data.h_ciudad, h_habitacion: data.h_habitacion, h_comidas: data.h_comidas, h_servicios: data.h_servicios
+                    };
+
+                    // Enviar JSON strings en campos ocultos
+                    formData.set('transporte_data_json', JSON.stringify(transporte_data));
+                    formData.set('hotel_data_json', JSON.stringify(hotel_data));
+                    
+                    // Eliminar campos originales que ahora son JSON
+                    ['trans_type', 't_empresa', 't_codigo', 't_origen', 't_destino', 't_ida', 't_regreso', 't_clase', 't_equipaje', 'h_nombre', 'h_ciudad', 'h_habitacion', 'h_comidas', 'h_servicios'].forEach(key => formData.delete(key));
+                }
+                
+                // El campo 'id' se convierte en parte de la URL para PUT
+                const id = formData.get('id');
+                formData.delete('id');
+
+                let url = `/api/${currentTab}`;
+                let method = id ? 'PUT' : 'POST';
+                if(id) url += `/${id}`;
+                
+                // --- SUBIDA FINAL ---
+                // Usar FormData y no definir Content-Type (el navegador lo hace automáticamente con el boundary para archivos)
+                const res = await fetch(url, {
+                    method: method,
+                    body: formData
+                });
+                
+                const responseData = await res.json();
+
+                if (responseData.success) {
+                    alert('Guardado exitoso!');
+                    document.querySelectorAll('.btn-close').forEach(b => b.click());
+                    switchTab(currentTab);
+                } else {
+                    alert('Error al guardar: ' + responseData.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+services:
+  # BALANCEADOR DE CARGA (NGINX)
+  loadbalancer:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./src:/var/www/html
+    depends_on:
+      - backend
+
+  # BACKEND PYTHON FLASK (Escalado)
+  backend:
+    build:
+      context: ./docker/flask
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_HOST=db-master
+      - DB_USER=user_docker
+      - DB_PASSWORD=password_segura
+      - DB_NAME=viajego_db
+    deploy:
+      replicas: 2
+    depends_on:
+      - db-master
+
+  # BASE DE DATOS MAESTRA (Puerto Host: 3306)
+  db-master:
+    image: mysql:8.0
+    container_name: mysql-master
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_segura
+      MYSQL_DATABASE: viajego_db
+      MYSQL_USER: user_docker
+      MYSQL_PASSWORD: password_segura
+    ports:
+      - "3306:3306" # Puerto estándar para el master
+    volumes:
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db-master-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  # BASE DE DATOS REPLICA (Puerto Host: 3307)
+  db-slave:
+    image: mysql:8.0
+    container_name: mysql-slave
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_segura
+      MYSQL_DATABASE: viajego_db
+    ports:
+      - "3307:3306"
+    depends_on:
+      - db-master
+    volumes:
+      # AGREGA ESTA LÍNEA PARA QUE TENGA DATOS AL INICIAR
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql 
+    command: --default-authentication-plugin=mysql_native_password
+
+volumes:
+  db-master-data:
