@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | ViajeGO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Animación de entrada suave */
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Fondo con degradado sutil */
+        body {
+            background: linear-gradient(135deg, #000000 0%, #1a0505 100%);
+        }
+    </style>
+</head>
+
+<body class="d-flex align-items-center justify-content-center vh-100">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow-lg border-danger border-opacity-25 fade-in-up"
+                    style="background-color: #121212;">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-paper-plane fa-3x text-danger mb-3"></i>
+                            <h2 class="fw-bold text-white">Bienvenido</h2>
+                            <p class="text-secondary small">Ingresa a tu cuenta ViajeGO</p>
+                        </div>
+
+                        <form id="login-form">
+                            <div class="form-floating mb-3">
+                                <input type="email" class="form-control border-secondary focus-ring focus-ring-danger"
+                                    id="email" placeholder="name@example.com" required>
+                                <label for="email" class="text-secondary">Correo Electrónico</label>
+                            </div>
+                            <div class="form-floating mb-4">
+                                <input type="password"
+                                    class="form-control border-secondary focus-ring focus-ring-danger" id="password"
+                                    placeholder="Password" required>
+                                <label for="password" class="text-secondary">Contraseña</label>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger w-100 py-2 fw-bold shadow-sm mb-3">
+                                INICIAR SESIÓN <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-4">
+                            <p class="text-muted small mb-1">¿No tienes cuenta?</p>
+                            <a href="registro.html" class="text-danger fw-bold text-decoration-none">Regístrate aquí</a>
+                            <div class="mt-3">
+                                <a href="index.html" class="text-secondary small text-decoration-none hover-white">
+                                    <i class="fas fa-arrow-left me-1"></i> Volver al Inicio
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+
+                    // --- REDIRECCIÓN POR ROL ---
+                    if (data.user.rol === 'admin') {
+                        window.location.href = 'adminPanel.html'; // NUEVO PANEL
+                    } else if (data.user.rol === 'agencia') {
+                        window.location.href = 'servicesPanel.html'; // ANTES admin.html
+                    } else {
+                        window.location.href = 'index.html'; // Turistas
+                    }
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('Error de conexión con el servidor');
+            }
+        });
+    </script>
+</body>
+
+</html>
