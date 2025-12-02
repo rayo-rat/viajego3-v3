@@ -1,0 +1,113 @@
+services:
+  # BALANCEADOR DE CARGA (NGINX)
+  loadbalancer:
+    image: nginx:alpine
+    container_name: viajego-loadbalancer-1
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf # Asegúrate de que este archivo está corregido
+      - ./src:/var/www/html
+    depends_on:
+      - viajego-backend-1
+      - viajego-backend-2
+
+  # BACKEND PYTHON 1
+  viajego-backend-1:
+    build:
+      context: ./docker/flask
+      dockerfile: Dockerfile
+    container_name: viajego-backend-1
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_HOST=db-master
+      - DB_USER=user_docker
+      - DB_PASSWORD=password_segura
+      - DB_NAME=viajego_db
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - PYTHONIOENCODING=utf-8
+    depends_on:
+      - db-master
+
+  # BACKEND PYTHON 2
+  viajego-backend-2:
+    build:
+      context: ./docker/flask
+      dockerfile: Dockerfile
+    container_name: viajego-backend-2
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_HOST=db-master
+      - DB_USER=user_docker
+      - DB_PASSWORD=password_segura
+      - DB_NAME=viajego_db
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - PYTHONIOENCODING=utf-8
+    depends_on:
+      - db-master
+
+      # BACKEND PYTHON 2
+  viajego-backend-3:
+    build:
+      context: ./docker/flask
+      dockerfile: Dockerfile
+    container_name: viajego-backend-3
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_HOST=db-master
+      - DB_USER=user_docker
+      - DB_PASSWORD=password_segura
+      - DB_NAME=viajego_db
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - PYTHONIOENCODING=utf-8
+    depends_on:
+      - db-master
+
+  # DB MAESTRA (MASTER)
+  db-master:
+    image: mysql:8.0
+    container_name: mysql-master
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_segura
+      MYSQL_DATABASE: viajego_db
+      MYSQL_USER: user_docker
+      MYSQL_PASSWORD: password_segura
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/mysql/master.cnf:/etc/mysql/conf.d/master.cnf 
+      - db-master-data:/var/lib/mysql
+    # ESTO FUERZA EL SERVER-ID=1
+    command: --server-id=1 --log-bin=mysql-bin --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # DB ESCLAVA (SLAVE / MIRROR)
+  db-slave:
+    image: mysql:8.0
+    container_name: mysql-slave
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_segura
+      MYSQL_DATABASE: viajego_db
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3307:3306"
+    depends_on:
+      - db-master
+    volumes:
+      - ./docker/mysql/slave.cnf:/etc/mysql/conf.d/slave.cnf
+      # IMPORTANT: Asegúrate de que init.sql no esté aquí, solo setup-replication.sh
+      - ./docker/mysql/setup-replication.sh:/docker-entrypoint-initdb.d/setup-replication.sh
+      - db-slave-data:/var/lib/mysql
+    # ESTO FUERZA EL SERVER-ID=2 (ÚNICO Y DIFERENTE)
+    command: --server-id=2 --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+volumes:
+  db-master-data:
+  db-slave-data:

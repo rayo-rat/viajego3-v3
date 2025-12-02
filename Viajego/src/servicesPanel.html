@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Servicios | ViajeGO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #121212; }
+        .sidebar { min-height: 100vh; background-color: #000; border-right: 1px solid #333; }
+        .nav-link { color: #aaa; border-radius: 5px; margin-bottom: 5px; transition: 0.3s; cursor: pointer; }
+        .nav-link:hover { background-color: #222; color: #fff; padding-left: 20px; }
+        .nav-link.active { background-color: #dc3545; color: white; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.4); }
+    </style>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-3 d-flex flex-column">
+                <div class="text-center mb-4 pt-2">
+                    <h4 class="fw-bold fst-italic text-white"><i class="fas fa-paper-plane text-danger"></i> ViajeGO</h4>
+                    <span class="badge bg-danger text-white">PANEL AGENCIA</span>
+                </div>
+                
+                <div class="nav flex-column nav-pills flex-grow-1">
+                    <p class="small text-muted fw-bold text-uppercase ms-2 mb-2">Mis Servicios</p>
+                    <a class="nav-link active" onclick="switchTab('vuelos')"><i class="fas fa-plane me-2 w-20"></i> Vuelos</a>
+                    <a class="nav-link" onclick="switchTab('hoteles')"><i class="fas fa-hotel me-2 w-20"></i> Hoteles</a>
+                    <a class="nav-link" onclick="switchTab('autobuses')"><i class="fas fa-bus me-2 w-20"></i> Autobuses</a>
+                </div>
+                
+                <div class="mt-auto border-top border-secondary pt-3">
+                    <div class="d-flex align-items-center mb-3 px-2">
+                        <div class="bg-danger rounded-circle p-2 me-2 text-center fw-bold" style="width: 35px; height: 35px;">A</div>
+                        <div class="text-truncate">
+                            <small class="text-white d-block fw-bold" id="agency-name">Cargando...</small>
+                            <small class="text-secondary" style="font-size: 0.75rem;">Agencia</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-danger w-100 btn-sm" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-10 p-4">
+                <div id="content-area">
+                    <div class="text-center pt-5"><div class="spinner-border text-danger"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalVuelo">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white border-secondary">
+                <div class="modal-header border-secondary bg-black">
+                    <h5 class="modal-title text-danger"><i class="fas fa-plane"></i> Gestión Vuelo</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-vuelo">
+                        <input type="hidden" name="id">
+                        <div class="row g-3">
+                            <div class="col-md-4"><input type="text" name="codigo_vuelo" class="form-control bg-black text-white border-secondary" placeholder="Código (Ej: AM123)" required></div>
+                            <div class="col-md-4"><input type="text" name="origen_iata" class="form-control bg-black text-white border-secondary" placeholder="Origen (IATA)" required></div>
+                            <div class="col-md-4"><input type="text" name="destino_iata" class="form-control bg-black text-white border-secondary" placeholder="Destino (IATA)" required></div>
+                            
+                            <div class="col-12"><h6 class="text-danger border-bottom border-secondary pb-1">ITINERARIO IDA</h6></div>
+                            <div class="col-6"><label class="small text-secondary">Salida</label><input type="datetime-local" name="fecha_salida" class="form-control bg-black text-white border-secondary" required></div>
+                            <div class="col-6"><label class="small text-secondary">Llegada</label><input type="datetime-local" name="fecha_llegada" class="form-control bg-black text-white border-secondary" required></div>
+
+                            <input type="hidden" name="fecha_regreso_salida" value="2025-01-01 00:00:00">
+                            <input type="hidden" name="fecha_regreso_llegada" value="2025-01-01 00:00:00">
+
+                            <div class="col-md-6"><input type="number" name="precio" class="form-control bg-black text-white border-secondary" placeholder="Precio ($)" required></div>
+                            
+                            <div class="col-md-6">
+                                <label class="small text-secondary mb-1">Clases Disponibles:</label>
+                                <div class="d-flex gap-3 bg-black p-2 border border-secondary rounded">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Estándar" id="v_est" name="clases_check">
+                                        <label class="form-check-label" for="v_est">Estándar</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Ejecutiva" id="v_eje" name="clases_check">
+                                        <label class="form-check-label" for="v_eje">Ejecutiva</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Primera" id="v_pri" name="clases_check">
+                                        <label class="form-check-label" for="v_pri">Primera</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <input type="hidden" name="clase_base" id="v_clase_final">
+                            <input type="hidden" name="aerolinea" id="hidden_aerolinea">
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100 mt-4">Guardar Vuelo</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalHotel">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white border-secondary">
+                <div class="modal-header border-secondary bg-black">
+                    <h5 class="modal-title text-warning"><i class="fas fa-hotel"></i> Gestión Hotel</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-hotel">
+                        <input type="hidden" name="id">
+                        <div class="row g-3">
+                            <div class="col-12"><input type="text" name="nombre" class="form-control bg-black text-white border-secondary" placeholder="Nombre Hotel" required></div>
+                            <div class="col-6"><input type="text" name="ciudad" class="form-control bg-black text-white border-secondary" placeholder="Ciudad" required></div>
+                            <div class="col-6"><input type="number" name="estrellas" class="form-control bg-black text-white border-secondary" placeholder="Estrellas (1-5)" min="1" max="5" required></div>
+                            <div class="col-6"><input type="number" name="precio_noche" class="form-control bg-black text-white border-secondary" placeholder="Precio Noche" required></div>
+                            
+                            <div class="col-6">
+                                <label class="small text-secondary mb-1">Habitaciones:</label>
+                                <div class="bg-black p-2 border border-secondary rounded">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Estándar" id="h_est" name="hab_check">
+                                        <label class="form-check-label" for="h_est">Estándar</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Doble" id="h_dob" name="hab_check">
+                                        <label class="form-check-label" for="h_dob">Doble</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Suite" id="h_sui" name="hab_check">
+                                        <label class="form-check-label" for="h_sui">Suite</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <input type="hidden" name="tipo_habitacion" id="h_tipo_final">
+                            <input type="hidden" name="servicios" value="">
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 mt-4 text-dark fw-bold">Guardar Hotel</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalBus">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white border-secondary">
+                <div class="modal-header border-secondary bg-black">
+                    <h5 class="modal-title text-info"><i class="fas fa-bus"></i> Gestión Autobús</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-autobus">
+                        <input type="hidden" name="id">
+                        <div class="row g-3">
+                            <div class="col-6"><input type="text" name="origen" class="form-control bg-black text-white border-secondary" placeholder="Origen" required></div>
+                            <div class="col-6"><input type="text" name="destino" class="form-control bg-black text-white border-secondary" placeholder="Destino" required></div>
+                            
+                            <div class="col-12"><h6 class="text-info border-bottom border-secondary pb-1">ITINERARIO IDA</h6></div>
+                            <div class="col-6"><label class="small text-secondary">Salida</label><input type="datetime-local" name="fecha_salida" class="form-control bg-black text-white border-secondary" required></div>
+                            <div class="col-6"><label class="small text-secondary">Llegada</label><input type="datetime-local" name="fecha_llegada" class="form-control bg-black text-white border-secondary" required></div>
+                            
+                            <input type="hidden" name="fecha_regreso_salida" value="2025-01-01 00:00:00">
+                            <input type="hidden" name="fecha_regreso_llegada" value="2025-01-01 00:00:00">
+
+                            <div class="col-6"><input type="number" name="precio" class="form-control bg-black text-white border-secondary" placeholder="Precio" required></div>
+                            
+                            <div class="col-6">
+                                <label class="small text-secondary mb-1">Asientos:</label>
+                                <div class="bg-black p-2 border border-secondary rounded">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Estándar" id="b_est" name="asiento_check">
+                                        <label class="form-check-label" for="b_est">Estándar</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Ejecutivo" id="b_eje" name="asiento_check">
+                                        <label class="form-check-label" for="b_eje">Ejecutivo</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="Lujo" id="b_luj" name="asiento_check">
+                                        <label class="form-check-label" for="b_luj">Lujo</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <input type="hidden" name="tipo_asiento" id="b_tipo_final">
+                            <input type="hidden" name="linea_autobus" id="hidden_linea">
+                        </div>
+                        <button type="submit" class="btn btn-info w-100 mt-4 text-white fw-bold">Guardar Ruta</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentUser = null;
+        let currentTab = 'vuelos';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const userStr = localStorage.getItem('user');
+            if(!userStr) window.location.href = 'login.html';
+            currentUser = JSON.parse(userStr);
+            
+            if(currentUser.rol !== 'agencia') {
+                alert("Acceso denegado. Solo agencias.");
+                window.location.href = 'index.html';
+            }
+
+            document.getElementById('agency-name').innerText = currentUser.nombre_comercial || (currentUser.nombre + ' ' + currentUser.apellido);
+            
+            document.getElementById('hidden_aerolinea').value = currentUser.nombre_comercial || 'Agencia';
+            document.getElementById('hidden_linea').value = currentUser.nombre_comercial || 'Agencia';
+
+            setTimeout(() => switchTab('vuelos'), 50);
+        });
+
+        async function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.nav-link').forEach(l => {
+                l.classList.remove('active');
+                if(l.getAttribute('onclick') && l.getAttribute('onclick').includes(tab)) l.classList.add('active');
+            });
+            
+            document.getElementById('content-area').innerHTML = '<div class="text-center pt-5"><div class="spinner-border text-danger"></div></div>';
+
+            try {
+                const res = await fetch(`/api/${tab}?agency_id=${currentUser.id}`);
+                const data = await res.json();
+                
+                let modalId = tab === 'vuelos' ? '#modalVuelo' : (tab === 'hoteles' ? '#modalHotel' : '#modalBus');
+                
+                let rows = data.map(item => {
+                    let info = '';
+                    if (tab === 'vuelos') info = `${item.origen_iata} <i class="fas fa-arrow-right mx-1 text-danger"></i> ${item.destino_iata}`;
+                    else if (tab === 'autobuses') info = `${item.origen} <i class="fas fa-arrow-right mx-1 text-info"></i> ${item.destino}`;
+                    else info = item.nombre;
+
+                    let precio = item.precio || item.precio_noche;
+                    
+                    const itemStr = encodeURIComponent(JSON.stringify(item));
+
+                    return `
+                    <tr class="align-middle">
+                        <td><span class="badge bg-secondary">#${item.id}</span></td>
+                        <td class="text-white fw-bold">${info}</td>
+                        <td class="text-success">$${precio}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-info me-1" onclick="openEdit('${itemStr}', '${modalId}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('${tab}', ${item.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                let html = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="text-white text-uppercase">${tab}</h3>
+                    <button class="btn btn-danger shadow" onclick="openNew('${modalId}')"><i class="fas fa-plus me-2"></i> Nuevo Servicio</button>
+                </div>
+                <div class="card card-dash border-secondary bg-dark">
+                    <div class="card-body p-0">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead><tr class="text-secondary small text-uppercase"><th>ID</th><th>Descripción</th><th>Precio Base</th><th class="text-end">Acciones</th></tr></thead>
+                            <tbody>${rows.length ? rows : '<tr><td colspan="4" class="text-center py-4 text-muted">No has registrado servicios aún.</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+                document.getElementById('content-area').innerHTML = html;
+
+            } catch(e) { console.error(e); }
+        }
+
+        function openNew(modalId) {
+            const form = document.querySelector(modalId + ' form');
+            form.reset();
+            form.querySelector('input[name="id"]').value = "";
+            
+            const hiddenAir = document.querySelector(modalId + ' #hidden_aerolinea');
+            if(hiddenAir) hiddenAir.value = currentUser.nombre_comercial || 'Agencia';
+            const hiddenBus = document.querySelector(modalId + ' #hidden_linea');
+            if(hiddenBus) hiddenBus.value = currentUser.nombre_comercial || 'Agencia';
+
+            new bootstrap.Modal(document.querySelector(modalId)).show();
+        }
+
+        function openEdit(itemStr, modalId) {
+            const item = JSON.parse(decodeURIComponent(itemStr));
+            const form = document.querySelector(modalId + ' form');
+            form.reset();
+            
+            form.querySelector('[name="id"]').value = item.id;
+            
+            const setCheckboxes = (fieldName, checkName) => {
+                const values = (item[fieldName] || '').split(',');
+                values.forEach(v => {
+                    const cb = form.querySelector(`input[name="${checkName}"][value="${v.trim()}"]`);
+                    if(cb) cb.checked = true;
+                });
+            };
+
+            if(currentTab === 'vuelos') {
+                form.querySelector('[name="codigo_vuelo"]').value = item.codigo_vuelo;
+                form.querySelector('[name="origen_iata"]').value = item.origen_iata;
+                form.querySelector('[name="destino_iata"]').value = item.destino_iata;
+                form.querySelector('[name="precio"]').value = item.precio;
+                setCheckboxes('clase_base', 'clases_check'); 
+                // Fechas
+                form.querySelector('[name="fecha_salida"]').value = new Date(item.fecha_salida).toISOString().slice(0,16);
+                form.querySelector('[name="fecha_llegada"]').value = new Date(item.fecha_llegada).toISOString().slice(0,16);
+            }
+            else if(currentTab === 'hoteles') {
+                form.querySelector('[name="nombre"]').value = item.nombre;
+                form.querySelector('[name="ciudad"]').value = item.ciudad;
+                form.querySelector('[name="estrellas"]').value = item.estrellas;
+                form.querySelector('[name="precio_noche"]').value = item.precio_noche;
+                setCheckboxes('tipo_habitacion', 'hab_check'); 
+                form.querySelector('[name="servicios"]').value = item.servicios || '';
+            }
+            else if(currentTab === 'autobuses') {
+                form.querySelector('[name="origen"]').value = item.origen;
+                form.querySelector('[name="destino"]').value = item.destino;
+                form.querySelector('[name="precio"]').value = item.precio;
+                setCheckboxes('tipo_asiento', 'asiento_check');
+                // Fechas
+                form.querySelector('[name="fecha_salida"]').value = new Date(item.fecha_salida).toISOString().slice(0,16);
+                form.querySelector('[name="fecha_llegada"]').value = new Date(item.fecha_llegada).toISOString().slice(0,16);
+            }
+
+            new bootstrap.Modal(document.querySelector(modalId)).show();
+        }
+
+        async function deleteItem(endpoint, id) {
+            if(!confirm('¿Eliminar servicio permanentemente?')) return;
+            const res = await fetch(`/api/${endpoint}/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if(data.success) switchTab(endpoint);
+            else alert('Error al eliminar: ' + (data.message || 'Desconocido'));
+        }
+
+        function logout() { localStorage.removeItem('user'); window.location.href = 'index.html'; }
+
+        // Manejo de formularios (CREAR y EDITAR)
+        ['form-vuelo','form-hotel','form-autobus'].forEach(fid => {
+            document.getElementById(fid).addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                formData.append('user_id', currentUser.id);
+                
+                // --- PROCESAR CHECKBOXES Y LIMPIAR ---
+                let dbFieldName = '';
+                
+                if (fid === 'form-vuelo') { dbFieldName = 'clase_base'; }
+                else if (fid === 'form-hotel') { dbFieldName = 'tipo_habitacion'; }
+                else { dbFieldName = 'tipo_asiento'; }
+                
+                const checkName = dbFieldName.includes('clase') ? 'clases_check' : (dbFieldName.includes('habitacion') ? 'hab_check' : 'asiento_check');
+                const selected = Array.from(form.querySelectorAll(`input[name="${checkName}"]:checked`)).map(cb => cb.value);
+                
+                if(selected.length === 0) {
+                    alert("Selecciona al menos una opción.");
+                    return;
+                }
+                
+                // 1. Asignar el valor al campo correcto de la BD
+                formData.set(dbFieldName, selected.join(','));
+                
+                // 2. ELIMINAR EL CAMPO TEMPORAL (SOLUCIÓN AL ERROR)
+                formData.delete(checkName); 
+                
+                // --- CAMPOS DE RELLENO (Dummy data para NOT NULL) ---
+                if(fid === 'form-vuelo') {
+                    formData.append('fecha_regreso_salida', '2025-01-01 00:00:00');
+                    formData.append('fecha_regreso_llegada', '2025-01-01 00:00:00');
+                }
+                if(fid === 'form-autobus') {
+                    formData.append('fecha_regreso_salida', '2025-01-01 00:00:00');
+                    formData.append('fecha_regreso_llegada', '2025-01-01 00:00:00');
+                }
+                // ----------------------------------------------------
+
+                const id = formData.get('id');
+                let url = `/api/${currentTab}`;
+                let method = 'POST';
+                
+                if(id) { url += `/${id}`; method = 'PUT'; }
+
+                let body, headers = {};
+                if(method === 'PUT') {
+                    const obj = {};
+                    formData.forEach((value, key) => obj[key] = value);
+                    body = JSON.stringify(obj);
+                    headers['Content-Type'] = 'application/json';
+                } else { body = formData; }
+
+                try {
+                    const res = await fetch(url, { method: method, headers: headers, body: body });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        alert(data.message || 'Guardado exitoso!');
+                        document.querySelectorAll('.btn-close').forEach(b => b.click());
+                        switchTab(currentTab);
+                    } else { 
+                        alert('Error: ' + (data.message || data.msg || 'Desconocido')); 
+                    }
+                } catch(err) {
+                    alert('Error de conexión');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
